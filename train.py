@@ -8,7 +8,7 @@ from musicautobot.utils.stacked_dataloader import StackedDataBunch
 from fastai.text import *
 
 # Location of your midi files
-midi_path = Path('data/midi/Training_Dataset')
+midi_path = Path('data/midi/19_examples')
 midi_path.mkdir(parents=True, exist_ok=True)
 
 # Location to save dataset
@@ -69,4 +69,4 @@ print('Training...')
 learn.fit_one_cycle(4)
 
 print('Saving the model...')
-learn.save('my_model/my_model.pth')
+learn.save('my_model')

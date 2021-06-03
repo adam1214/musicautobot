@@ -1,18 +1,5 @@
 # Added files
-data/*
-!data/midi
-data/midi/*
-!data/midi/examples
-!data/midi/notebook_examples
-
-
-models/
-tmp_out/
-data_serve/
-notebooks/data_collection/musescore/*.json
-notebooks/develop/
-.vscode
-.DS_Store
+data/numpy/pretrained/*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

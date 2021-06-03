@@ -6,6 +6,7 @@ from ..music_transformer.transform import *
 from ..music_transformer.learner import filter_invalid_indexes
 from .model import get_multitask_model
 from .dataloader import *
+from ..config import *
 
 def multitask_model_learner(data:DataBunch, config:dict=None, drop_mult:float=1., 
                             pretrained_path:PathOrStr=None, **learn_kwargs) -> 'LanguageLearner':
@@ -15,7 +16,8 @@ def multitask_model_learner(data:DataBunch, config:dict=None, drop_mult:float=1.
 
     if pretrained_path: 
         state = torch.load(pretrained_path, map_location='cpu')
-        if config is None: config = state['config']
+        if config is None: 
+            config = state['config']
 
     model = get_multitask_model(vocab_size, config=config, drop_mult=drop_mult, pad_idx=vocab.pad_idx)
     metrics = [AverageMultiMetric(partial(m, pad_idx=vocab.pad_idx)) for m in [mask_acc, lm_acc, c2m_acc, m2c_acc]]
