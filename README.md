@@ -1,3 +1,4 @@
+* [Pretrained Model & My model Link](https://drive.google.com/drive/folders/1ZktjbYJaClwkJ0E2eo77AakUFRh94K0W?usp=sharing) (put model in `/data/numpy/pretrained` dir)
 # MusicAutobot
 
 Using Deep Learning to generate pop music! 
