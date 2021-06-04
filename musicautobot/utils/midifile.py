@@ -73,6 +73,7 @@ def compress_midi_file(fp, cutoff=6, min_variation=3, supported_types=set([Track
     for idx,t in enumerate(note_tracks):
         if len(supported_tracks) >= cutoff: break
         track_type = get_track_type(t)
+        track_type=Track.PIANO
         if track_type not in supported_types: continue
         pitch_set = unique_track_notes(t)
         if (len(pitch_set) < min_variation): continue # must have more than x unique notes
