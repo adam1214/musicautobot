@@ -26,7 +26,7 @@ def create_databunch(files, data_save_name, path):
     return data
 
 def timeout_func(data, seconds):
-    print("Timeout:", seconds, data.get('midi'))
+    print("Timeout:", seconds)
 
 def process_metadata(midi_file):
     # Get outfile and check if it exists
