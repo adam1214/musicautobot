@@ -103,17 +103,3 @@ processed = process_all(process_metadata, midi_files, timeout=120, timeout_func=
 numpy_files = get_files(numpy_path, extensions='.npy', recurse=True)
 
 all_data = create_databunch(numpy_files, data_save_name=data_save_name, path=data_path)
-
-
-print('Loading model...')
-batch_size = 1
-encode_position = True
-dl_tfms = [batch_position_tfm] if encode_position else []
-data = load_data(data_path, data_save_name, bs=batch_size, encode_position=encode_position, dl_tfms=dl_tfms)
-
-config = default_config()
-config['encode_position'] = encode_position
-learn = music_model_learner(data, config=config.copy())
-
-learn.fit_one_cycle(4)
-learn.save('TPD_model')
