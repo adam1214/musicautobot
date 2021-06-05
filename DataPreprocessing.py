@@ -41,7 +41,7 @@ def transform_midi(midi_file):
     input_path = midi_file
     
     try: 
-        if num_piano_tracks(input_path) not in [1, 2]: return None
+        #if num_piano_tracks(input_path) not in [1, 2]: return None
         input_file = compress_midi_file(input_path, min_variation=min_variation, cutoff=2, supported_types=set([Track.PIANO])) # remove non note tracks and standardize instruments
         if not input_file: return None
     except Exception as e:
@@ -70,13 +70,14 @@ def transform_midi(midi_file):
     # Only 2 piano parts allowed
     if len(chordarr.shape) != 3: return None
     _,num_parts,_ = chordarr.shape
+    print(num_parts)
     if num_parts != 2: return None
     
     # Individual parts must have notes
     parts = [part_enc(chordarr, i) for i in range(num_parts)]
     for p in parts: 
         if not is_valid_npenc(p, min_notes=8, input_path=input_path): return None
-        
+    
     # order by melody > chords
     p1, p2 = parts
     m, c = (p1, p2) if avg_pitch(p1) > avg_pitch(p2) else (p2, p1) # Assuming melody has higher pitch
@@ -84,15 +85,15 @@ def transform_midi(midi_file):
     return np.array([m, c])
 
 # Location of your midi files
-midi_path = Path('data/midi/TPD')
+midi_path = Path('data/midi/19_examples')
 # Location of preprocessed numpy files
 s2s_numpy_path = Path('data/numpy/multitask_preprocessed_data_s2s')
 
 # Location of models and cached dataset
 data_path = Path('data/cached')
 
-lm_data_save_name = 'TPD_multitask_musicitem_data_save.pkl'
-s2s_data_save_name = 'TPD_multitask_multiitem_data_save.pkl'
+lm_data_save_name = 'example_19_multitask_musicitem_data_save.pkl'
+s2s_data_save_name = 'example_19_multitask_multiitem_data_save.pkl'
 
 # num_tracks = [1, 2] # number of tracks to support
 cutoff = 5 # max instruments
@@ -107,3 +108,10 @@ for r in random.sample(midi_files, 10):
     process_metadata(r)
 
 processed = process_all(process_metadata, midi_files, timeout=120, timeout_func=timeout_func)
+
+
+processors = [Midi2ItemProcessor()]
+data = MusicDataBunch.from_files(midi_files, data_path, processors=processors, 
+                                 encode_position=True, dl_tfms=mask_lm_tfm_pitchdur, 
+                                 bptt=5, bs=2)
+data.save(lm_data_save_name)

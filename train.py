@@ -24,26 +24,20 @@ def create_databunch(files, data_save_name, path):
     return data
 
 # Location of your midi files
-midi_path = Path('data/midi/TPD')
+midi_path = Path('data/midi/19_examples')
 # Location of preprocessed numpy files
 s2s_numpy_path = Path('data/numpy/multitask_preprocessed_data_s2s')
 
 # Location of models and cached dataset
 data_path = Path('data/cached')
 
-lm_data_save_name = 'TPD_multitask_musicitem_data_save.pkl'
-s2s_data_save_name = 'TPD_multitask_multiitem_data_save.pkl'
+lm_data_save_name = 'example_19_multitask_musicitem_data_save.pkl'
+s2s_data_save_name = 'example_19_multitask_multiitem_data_save.pkl'
 
 print('Create sequence to sequence dataset')
 s2s_numpy_files = get_files(s2s_numpy_path, extensions='.npy', recurse=True)
-s2s_data = create_databunch(s2s_numpy_files, data_save_name=s2s_data_save_name, path=data_path)
-xb, yb = s2s_data.one_batch()
-
-print('Create NextWord/Mask Dataset')
-lm_data = load_data(data_path, lm_data_save_name, 
-                    bs=batch_size, bptt=bptt, encode_position=True,
-                    dl_tfms=mask_lm_tfm_pitchdur)
-xb, yb = lm_data.one_batch()
+#s2s_data = create_databunch(s2s_numpy_files, data_save_name=s2s_data_save_name, path=data_path)
+#xb, yb = s2s_data.one_batch()
 
 print('Initialize Model')
 # Load Data
@@ -68,4 +62,4 @@ learn = multitask_model_learner(data, config.copy())
 # learn.to_fp16(dynamic=True) # Enable for mixed precision
 
 learn.fit_one_cycle(4)
-learn.save('TPD_multitask_model')
+learn.save('examples_19_multitask_model')
