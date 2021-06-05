@@ -1,5 +1,6 @@
 # Added files
 data/numpy/pretrained/*
+data/cached/models/*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -1,13 +1,14 @@
 from musicautobot.numpy_encode import *
-from musicautobot.utils.file_processing import process_all, process_file
 from musicautobot.config import *
 from musicautobot.music_transformer import *
-from musicautobot.multitask_transformer import *
-from musicautobot.utils.stacked_dataloader import StackedDataBunch
 from musicautobot.utils.midifile import *
+from musicautobot.utils.file_processing import process_all
 
-
-from fastai.text import *
+from musicautobot.numpy_encode import *
+from musicautobot.config import *
+from musicautobot.music_transformer import *
+from musicautobot.utils.midifile import *
+from musicautobot.utils.file_processing import process_all
 
 import random
 
@@ -18,10 +19,9 @@ def create_databunch(files, data_save_name, path):
     else:
         save_file.parent.mkdir(exist_ok=True, parents=True)
         vocab = MusicVocab.create()
-        processors = [S2SFileProcessor(), S2SPartsProcessor()]
+        processors = [OpenNPFileProcessor(), MusicItemProcessor()]
 
-        data = MusicDataBunch.from_files(files, path, processors=processors, 
-                                          preloader_cls=S2SPreloader, list_cls=S2SItemList, dl_tfms=melody_chord_tfm)
+        data = MusicDataBunch.from_files(files, path, processors=processors, encode_position=True)
         data.save(data_save_name)
     return data
 
@@ -30,7 +30,7 @@ def timeout_func(data, seconds):
 
 def process_metadata(midi_file):
     # Get outfile and check if it exists
-    out_file = s2s_numpy_path/midi_file.relative_to(midi_path).with_suffix('.npy')
+    out_file = numpy_path/midi_file.relative_to(midi_path).with_suffix('.npy')
     out_file.parent.mkdir(parents=True, exist_ok=True)
     if out_file.exists(): return
     
@@ -40,10 +40,12 @@ def process_metadata(midi_file):
 def transform_midi(midi_file):
     input_path = midi_file
     
+    # Part 1: Filter out midi tracks (drums, repetitive instruments, etc.)
     try: 
-        if num_piano_tracks(input_path) not in [1, 2]: return None
-        input_file = compress_midi_file(input_path, min_variation=min_variation, cutoff=2, supported_types=set([Track.PIANO])) # remove non note tracks and standardize instruments
-        if not input_file: return None
+#         if duet_only and num_piano_tracks(input_path) not in [1, 2]: return None
+        input_file = compress_midi_file(input_path, min_variation=min_variation, cutoff=cutoff) # remove non note tracks and standardize instruments
+        
+        if input_file is None: return None
     except Exception as e:
         if 'badly form' in str(e): return None # ignore badly formatted midi errors
         if 'out of range' in str(e): return None # ignore badly formatted midi errors
@@ -56,43 +58,34 @@ def transform_midi(midi_file):
         chordarr = stream2chordarr(stream) # 2. max_dur = quarter_len * sample_freq (4). 128 = 8 bars
     except Exception as e:
         print('Could not encode to chordarr:', input_path, e)
-#         print(traceback.format_exc())
+        print(traceback.format_exc())
         return None
     
+    # Part 3. Compress song rests - Don't want songs with really long pauses 
+    # (this happens because we filter out midi tracks).
     chord_trim = trim_chordarr_rests(chordarr)
     chord_short = shorten_chordarr_rests(chord_trim)
     delta_trim = chord_trim.shape[0] - chord_short.shape[0]
-#     if delta_trim > 300: 
+#     if delta_trim > 500: 
 #         print(f'Removed {delta_trim} rests from {input_path}. Skipping song')
 #         return None
     chordarr = chord_short
     
-    # Only 2 piano parts allowed
-    if len(chordarr.shape) != 3: return None
-    _,num_parts,_ = chordarr.shape
-    if num_parts != 2: return None
+    # Part 3. Chord array to numpy
+    npenc = chordarr2npenc(chordarr)
+    if not is_valid_npenc(npenc, input_path=input_path):
+        return None
     
-    # Individual parts must have notes
-    parts = [part_enc(chordarr, i) for i in range(num_parts)]
-    for p in parts: 
-        if not is_valid_npenc(p, min_notes=8, input_path=input_path): return None
-        
-    # order by melody > chords
-    p1, p2 = parts
-    m, c = (p1, p2) if avg_pitch(p1) > avg_pitch(p2) else (p2, p1) # Assuming melody has higher pitch
-    
-    return np.array([m, c])
+    return npenc
 
 # Location of your midi files
 midi_path = Path('data/midi/TPD')
 # Location of preprocessed numpy files
-s2s_numpy_path = Path('data/numpy/multitask_preprocessed_data_s2s')
+numpy_path = Path('data/numpy/preprocessed data')
 
 # Location of models and cached dataset
 data_path = Path('data/cached')
-
-lm_data_save_name = 'TPD_multitask_musicitem_data_save.pkl'
-s2s_data_save_name = 'TPD_multitask_multiitem_data_save.pkl'
+data_save_name = 'TPD_musicitem_data_save.pkl'
 
 # num_tracks = [1, 2] # number of tracks to support
 cutoff = 5 # max instruments
@@ -101,9 +94,12 @@ min_variation = 3 # minimum number of different midi notes played
 
 midi_files = get_files(midi_path, '.mid', recurse=True)
 
-
 # # sanity check
 for r in random.sample(midi_files, 10):
     process_metadata(r)
 
 processed = process_all(process_metadata, midi_files, timeout=120, timeout_func=timeout_func)
+
+numpy_files = get_files(numpy_path, extensions='.npy', recurse=True)
+
+all_data = create_databunch(numpy_files, data_save_name=data_save_name, path=data_path)
